@@ -18,39 +18,42 @@ class MovieEffect(object):
 
 class BlinkyCircleEffect(MovieEffect):
 
-    def __init__(self, ax, data, names=None, pos=None, cmap=None):
+    def __init__(self, ax, data, names=None, pos=None, cmap=None,
+                 size=0.4, vmin=0.0, vmax=1.0,
+                 make_patch=lambda x,y,sz: Circle((x,y),sz/0.2)):
         """ Initialize the frame for
             Create a polygon for each stock
         """
-        N = data['N']
+        self.data = data
+        self.N, self.T = self.data.shape
+        self.offset = 0
 
         if pos is None:
             # Initial setup: Just place the nodes randomly
-            pos = np.zeros((N,2))
-            pos[:,0] = np.mod(np.arange(N), 10)
-            pos[:,1] = np.arange(N) / 10
-            pos += 0.1*np.random.randn(N,2)
+            pos = np.zeros((self.N,2))
+            pos[:,0] = np.mod(np.arange(self.N), 10)
+            pos[:,1] = np.arange(self.N) / 10
+            pos += 0.1*np.random.randn(self.N,2)
 
         # Set axis limits
-        ax.set_xlim([-1,np.amax(pos[:,0])+1])
-        ax.set_ylim([-1,np.amax(pos[:,1])+1])
-
-        diam = 0.4
+        ax.set_xlim([np.amin(pos[:,0])-1,np.amax(pos[:,0])+1])
+        ax.set_ylim([np.amin(pos[:,1])-1,np.amax(pos[:,1])+1])
 
         patches = []
-        for n in np.arange(N):
-            circle = Circle((pos[n,0], pos[n,1]), diam/2.0)
-            patches.append(circle)
+        for n in np.arange(self.N):
+            patch = make_patch(pos[n,0], pos[n,1], size)
+            patches.append(patch)
         p = PatchCollection(patches, cmap=cmap, alpha=1.0)
 
         # Set the values of the patches
-        p.set_array(np.zeros(N))
+        p.set_array(self.data[:,0])
+        p.set_clim(vmin, vmax)
         ax.add_collection(p)
 
         # Plot names above a few circles
         if names is not None:
             assert isinstance(names, list)
-            assert len(names) == N
+            assert len(names) == self.N
             for n,name in enumerate(names):
                 if name is not None:
                     ax.text(pos[n,0], pos[n,1], name,
@@ -59,10 +62,14 @@ class BlinkyCircleEffect(MovieEffect):
 
         self.p = p
 
-    def update(self, v):
+    def update(self):
         """ Plot a frame of the financial data
         """
-        self.p.set_array(v)
+        self.offset += 1
+        if self.offset > self.T:
+            print "WARNING: BlinkyCircleEffect has passed the length of the data!"
+
+        self.p.set_array(self.data[:,self.offset])
 
 
 class SlidingMatrixEffect(MovieEffect):

@@ -83,3 +83,33 @@ def hmc(U,
         return (q_next, new_step_sz, new_accept_rate)
     else:
         return q_next
+
+def test_hmc():
+    """
+    Test HMC on a Gaussian distribution
+    """
+    from scipy.stats import norm
+    mu = 0
+    sig = 1
+    p = norm(mu, sig).pdf
+
+    f = lambda x: -0.5*x**2
+    grad_f = lambda x: -x
+
+    N_samples = 10000
+    smpls = np.zeros(N_samples)
+    for s in np.arange(1,N_samples):
+        smpls[s] = hmc(lambda x: -1.0*f(x),
+                       lambda x: -1.0*grad_f(x),
+                       0.1, 10,
+                       np.atleast_1d(smpls[s-1]))
+    import matplotlib.pyplot as plt
+    f = plt.figure()
+    _, bins, _ = plt.hist(smpls, 20, normed=True, alpha=0.2)
+    bincenters = 0.5*(bins[1:]+bins[:-1])
+    plt.plot(bincenters, p(bincenters), 'r--', linewidth=1)
+    plt.show()
+
+if __name__ == '__main__':
+    test_hmc()
+

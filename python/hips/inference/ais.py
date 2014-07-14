@@ -37,13 +37,6 @@ g_log_lkhd = lambda mu: reduce(lambda ll,xn: ll + -1.0/sigma**2 *(xn-mu), x, 0)
 log_posterior = lambda mu, eta: log_lkhd(mu) + log_prior(mu, eta)
 g_log_posterior = lambda mu, eta: g_log_lkhd(mu) + g_log_prior(mu, eta)
 
-# Compute the posterior by hand for this model
-# Remember the prior mean is zero so it does not show up in the posterior mean
-posterior_var = lambda eta: 1.0/(1.0/eta**2 + x.size/sigma**2)
-posterior_mean = lambda eta: (x.sum() / sigma**2) * posterior_var(eta)
-true_log_posterior = lambda mu, eta: -0.5*np.log(2*np.pi*posterior_var(eta)) \
-                                -0.5/posterior_var(eta) * (mu-posterior_mean(eta))**2
-
 # Now compute the evidence with annealed importance sampling.
 # First we need to specify a set of betas, i.e. mixing weights that
 # we use to geometrically weight the prior and the posterior. The idea
@@ -66,8 +59,6 @@ betas = np.linspace(0,1,N)
 q_std = 0.05
 q_sample = lambda mu: mu + q_std * np.random.randn()
 q = lambda x0, xf: 1.0
-
-# TODO Debug mh
 
 def ais(eta):
     # Run the annealed importance sampler to generate M samples
@@ -114,24 +105,34 @@ def ais(eta):
     log_Z = -np.log(M) + logsumexp(log_weights)
     return log_Z
 
+# Compute the posterior by hand for this model
+# Remember the prior mean is zero so it does not show up in the posterior mean
+posterior_var = lambda eta: 1.0/(1.0/eta**2 + x.size/sigma**2)
+posterior_mean = lambda eta: (x.sum() / sigma**2) * posterior_var(eta)
+true_log_posterior = lambda mu, eta: -0.5*np.log(2*np.pi*posterior_var(eta)) \
+                                -0.5/posterior_var(eta) * (mu-posterior_mean(eta))**2
+
+
 # Compute the true normalization constant (i.e. model evidence) for a variety
-# of prior variances, eta. We can calculate it in closed form or by plugging in mu's.
-# Since the evidence is not a function of mu, it should be the same for all mus.
-etas = np.linspace(0.25, 0.5, 5)
+# of prior variances, eta.
+etas = np.linspace(0.25, 2, 10)
 true_evidence = np.zeros_like(etas)
 ais_evidence = np.zeros_like(etas)
 for j,eta in enumerate(etas):
+    # Compute true evidence. We can calculate it in closed form or by plugging in mu's.
+    # Since the evidence is not a function of mu, it should be the same for all mus.
     print 'eta: %f' % eta
     mu = 0.0
     true_evidence[j] = log_prior(mu, eta) + log_lkhd(mu) - true_log_posterior(mu, eta)
+
+    # Compute the evidence with Annealed Importance Sampling (AIS)
     ais_evidence[j] = ais(eta)
-    # print "eta: %f\tmu: %f:\tEvidence:%f" % (eta,mu,evidence)
 
 plt.figure()
 plt.plot(etas, true_evidence, label='True')
 plt.plot(etas, ais_evidence, label='AIS')
 plt.xlabel('$\\eta$')
 plt.ylabel('Evidence')
-plt.legend()
+plt.legend(loc='lower right')
 plt.show()
 

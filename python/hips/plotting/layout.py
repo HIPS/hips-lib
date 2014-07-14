@@ -1,6 +1,13 @@
 import matplotlib.pyplot as plt
 
-def create_axis_at_location(fig, left, bottom, width, height, box=True, ticks=True):
+def create_figure(figsize=None, transparent=True):
+    fig = plt.figure(figsize=figsize)
+    if transparent:
+        fig.patch.set_alpha(0.0)
+
+
+def create_axis_at_location(fig, left, bottom, width, height,
+                            transparent=False, box=True, ticks=True):
     """
     Create axes at abolute position by scaling to figure size
     """
@@ -8,6 +15,9 @@ def create_axis_at_location(fig, left, bottom, width, height, box=True, ticks=Tr
 
     # Adjust subplot so that the panel is 1.25 in high and 1 width
     ax = fig.add_axes([left/w, bottom/h, width/w, height/h])
+
+    if transparent:
+        ax.patch.set_alpha(0.0)
 
     if not box:
         ax.spines['top'].set_visible(False)
@@ -50,3 +60,44 @@ def remove_tick_marks(ax):
 
     ax.set_xticklabels([])
     ax.set_yticklabels([])
+
+def create_legend_figure(labels, colors, size=None,
+                         fontsize=9, type='line',
+                         orientation='horizontal', ncol=None,
+                         **kwargs):
+    """
+    Create a separate figure for a legend.
+    :param labels:
+    :param colors:
+    :param orientation:
+    :param type:
+    :param kwargs:
+    :return:
+    """
+    assert len(labels) == len(colors)
+
+    dummyfig = plt.figure()
+    dummyax = dummyfig.add_subplot(111)
+
+    handles = []
+    if type == 'line':
+        for c in colors:
+            handles.append(dummyax.plot([0,0],[1,1], color=c, **kwargs)[0])
+    else:
+        raise Exception('Other types of plots are not yet supported')
+
+    # Set number of columns
+    if ncol is None:
+        if orientation == 'horizontal':
+            ncol = len(labels)
+        else:
+            ncol = 1
+
+    figlegend = plt.figure(figsize=size)
+    plt.figlegend(handles,
+                  labels,
+                  loc='center',
+                  fontsize=fontsize,
+                  ncol=ncol)
+
+    return figlegend

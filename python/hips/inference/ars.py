@@ -67,6 +67,8 @@ def adaptive_rejection_sample(func, xs, v_xs, domain, stepsz=1.0, debug=False):
     b = xs[-1]
     if len(xs) < 5:
         x_prop = a + (b-a)*np.random.rand(5-len(xs))
+        if len(x_prop) == 1:
+            x_prop = x_prop.reshape(())
         v_prop = func(x_prop)
         xs, v_xs = _add_point(xs, v_xs, x_prop, v_prop)
 

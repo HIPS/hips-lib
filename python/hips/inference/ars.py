@@ -223,6 +223,9 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
 
             # Compute the gradient and function value at xl
             rgrad, vxr, xp, vxp = _check_grad(func, xr)
+            if np.isfinite(vxr):
+                xs, v_xs = _add_point(xs, v_xs, xr, vxr)
+
             if np.isfinite(vxp):
                 xs, v_xs = _add_point(xs, v_xs, xp, vxp)
 

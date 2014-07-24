@@ -237,7 +237,6 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
             # and add this point to out set
             elif rgrad >= 0:
                 xrl = xr
-                xs, v_xs = _add_point(xs, v_xs, xr, vxr)
 
             nsteps += 1
             if nsteps > 20:

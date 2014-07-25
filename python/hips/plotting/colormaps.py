@@ -15,6 +15,27 @@ def white_to_color_cmap(color, nsteps=256):
     cmap = LinearSegmentedColormap('white_color_colormap', cdict, nsteps)
     return cmap
 
+def gradient_cmap(colors, nsteps=256):
+    # Make a colormap that interpolates between a set of colors
+    ncolors = len(colors)
+    # assert colors.shape[1] == 3
+    bounds = np.linspace(0,1,ncolors)
+
+
+    reds = []
+    greens = []
+    blues = []
+    for b,c in zip(bounds, colors):
+        reds.append((b, c[0], c[0]))
+        greens.append((b, c[1], c[1]))
+        blues.append((b, c[2], c[2]))
+
+    cdict = {'red': tuple(reds),
+             'green': tuple(greens),
+             'blue': tuple(blues)}
+
+    cmap = LinearSegmentedColormap('grad_colormap', cdict, nsteps)
+    return cmap
 
 def combo_white_to_color_cmap(colors, nsteps=1000):
     ncolors = colors.shape[0]

@@ -140,7 +140,8 @@ def _check_concavity(xs, v_xs):
     g = np.diff(v_xs)/np.diff(xs)
     g2 = np.diff(g)/np.diff(xs[:-1])
     if not np.all(g2<=0):
-        raise Exception("It looks like the function to be sampled is not log concave!")
+        # raise Exception("It looks like the function to be sampled is not log concave!")
+        print Warning("It looks like the function to be sampled is not log concave!")
 
 def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
     """
@@ -191,7 +192,8 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
 
             nsteps += 1
             if nsteps >100:
-                raise Exception("Failed to find right bound!")
+                import pdb; pdb.set_trace()
+                raise Exception("Failed to find left bound!")
 
             # Otherwise, we've found our left bound
 
@@ -240,6 +242,7 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
 
             nsteps += 1
             if nsteps > 100:
+                import pdb; pdb.set_trace()
                 raise Exception("Failed to find right bound!")
 
     return xs, v_xs, domain
@@ -365,7 +368,9 @@ def _ars_compute_hulls(S, fS, domain):
         # Make sure it's in the valid range
         ix = (b1-b2)/(m2-m1)
         if not (ix >= S[li] and ix <= S[li+1]):
-            import pdb; pdb.set_trace()
+            # This seems to happen when fS goes from a reasonable to an unreasonable range
+            # import pdb; pdb.set_trace()
+            ix = np.clip(ix, S[li]+np.spacing(1), S[li+1]-np.spacing(1))
     
         # pro = np.exp(b1)/m1 * ( np.exp(m1*ix) - np.exp(m1*S[li]) )
         lnpr1 = _signed_lse(m1, b1, ix, S[li])

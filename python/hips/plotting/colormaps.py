@@ -15,11 +15,12 @@ def white_to_color_cmap(color, nsteps=256):
     cmap = LinearSegmentedColormap('white_color_colormap', cdict, nsteps)
     return cmap
 
-def gradient_cmap(colors, nsteps=256):
+def gradient_cmap(colors, nsteps=256, bounds=None):
     # Make a colormap that interpolates between a set of colors
     ncolors = len(colors)
     # assert colors.shape[1] == 3
-    bounds = np.linspace(0,1,ncolors)
+    if bounds is None:
+        bounds = np.linspace(0,1,ncolors)
 
 
     reds = []

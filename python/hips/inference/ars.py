@@ -144,7 +144,8 @@ def _check_concavity(xs, v_xs):
     g = np.diff(v_xs)/np.diff(xs)
     g2 = np.diff(g)/np.diff(xs[:-1])
     if not np.all(g2<=0):
-        raise Exception("It looks like the function to be sampled is not log concave!")
+        # raise Exception("It looks like the function to be sampled is not log concave!")
+        print Warning("It looks like the function to be sampled is not log concave!")
 
 def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
     """
@@ -195,8 +196,9 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
                 xlr = xl
 
             nsteps += 1
-            if nsteps > 20:
-                raise Exception("Failed to find right bound!")
+            if nsteps >100:
+                import pdb; pdb.set_trace()
+                raise Exception("Failed to find left bound!")
 
             # Otherwise, we've found our left bound
 
@@ -244,7 +246,8 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
                 xrl = xr
 
             nsteps += 1
-            if nsteps > 20:
+            if nsteps > 100:
+                import pdb; pdb.set_trace()
                 raise Exception("Failed to find right bound!")
 
     return xs, v_xs, domain
@@ -522,7 +525,9 @@ def _ars_compute_hulls(S, fS, domain):
         # Make sure it's in the valid range
         ix = (b1-b2)/(m2-m1)
         if not (ix >= S[li] and ix <= S[li+1]):
-            import pdb; pdb.set_trace()
+            # This seems to happen when fS goes from a reasonable to an unreasonable range
+            # import pdb; pdb.set_trace()
+            ix = np.clip(ix, S[li]+np.spacing(1), S[li+1]-np.spacing(1))
     
         # pro = np.exp(b1)/m1 * ( np.exp(m1*ix) - np.exp(m1*S[li]) )
         lnpr1 = _signed_lse(m1, b1, ix, S[li])
@@ -805,3 +810,48 @@ def test_ars_trunc_gaussian():
 
 if __name__ == '__main__':
     test_ars_trunc_gaussian()
+
+def test_gamma_linear_regression_ars():
+    """
+    Test ARS on a gamma distributed coefficient for a gaussian noise model
+    y = c*x + N(0,1)
+    c ~ gamma(2,2)
+    """
+    a = 6.
+    b = 1.
+    x = 1
+    sig = 0.1
+    from scipy.stats import gamma, norm
+    g = gamma(a, scale=1./b)
+    prior = g.logpdf
+    lkhd = lambda c,y: -0.5/sig**2 * (y-c*x)**2
+    posterior = lambda c,y: prior(c) + lkhd(c,y)
+
+    N_samples = 50000
+    c_smpls = np.zeros(N_samples)
+    y_smpls = np.zeros(N_samples)
+    c_smpls[0] = g.rvs(1)
+    y_smpls[0] = c_smpls[0]*x + sig*np.random.randn()
+    for s in np.arange(1,N_samples):
+        if np.mod(s, 100) == 0:
+            print "Sample ", s
+        # Sample y given c
+        y_smpls[s] = c_smpls[s-1]*x + sig*np.random.randn()
+
+        # Sample c given y
+        cond = lambda c: posterior(c, y_smpls[s])
+
+        x_init = np.array([0.1, 3.0, 6.0, 10.0, 15.])
+        v_init = cond(x_init)
+        c_smpls[s] =  adaptive_rejection_sample(cond , x_init, v_init, (0, np.Inf), debug=False)
+
+    import matplotlib.pyplot as plt
+    f = plt.figure()
+    _, bins, _ = plt.hist(c_smpls, 20, normed=True, alpha=0.2)
+    bincenters = 0.5*(bins[1:]+bins[:-1])
+    plt.plot(bincenters, g.pdf(bincenters), 'r--', linewidth=1)
+    plt.show()
+
+if __name__ == '__main__':
+    # test_ars()
+    test_gamma_linear_regression_ars()

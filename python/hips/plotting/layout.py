@@ -4,7 +4,7 @@ def create_figure(figsize=None, transparent=True):
     fig = plt.figure(figsize=figsize)
     if transparent:
         fig.patch.set_alpha(0.0)
-
+    return fig
 
 def create_axis_at_location(fig, left, bottom, width, height,
                             transparent=False, box=True, ticks=True):
@@ -93,11 +93,16 @@ def create_legend_figure(labels, colors, size=None,
         else:
             ncol = 1
 
-    figlegend = plt.figure(figsize=size)
+    fig = plt.figure(figsize=size)
+
     plt.figlegend(handles,
                   labels,
                   loc='center',
                   fontsize=fontsize,
                   ncol=ncol)
 
-    return figlegend
+    # Set the figure background to transparent
+    fig.patch.set_alpha(0.0)
+
+
+    return fig

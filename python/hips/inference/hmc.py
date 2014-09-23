@@ -110,6 +110,57 @@ def test_hmc():
     plt.plot(bincenters, p(bincenters), 'r--', linewidth=1)
     plt.show()
 
-if __name__ == '__main__':
-    test_hmc()
+def test_gamma_linear_regression_hmc():
+    """
+    Test ARS on a gamma distributed coefficient for a gaussian noise model
+    y = c*x + N(0,1)
+    c ~ gamma(2,2)
+    """
+    a = 6.
+    b = 1.
+    x = 1
+    sig = 1.0
+    avg_accept_rate = 0.9
+    stepsz = 0.01
+    nsteps = 10
+    N_samples = 10000
 
+    from scipy.stats import gamma, norm
+    g = gamma(a, scale=1./b)
+    prior = lambda logc: a * logc -b*np.exp(logc)
+    dprior = lambda logc: a -b*np.exp(logc)
+    lkhd = lambda logc,y: -0.5/sig**2 * (y-np.exp(logc)*x)**2
+    dlkhd = lambda logc,y: 1.0/sig**2 * (y-np.exp(logc)*x) * np.exp(logc)*x
+    posterior = lambda logc,y: prior(logc) + lkhd(logc,y)
+    dposterior = lambda logc,y: dprior(logc) + dlkhd(logc,y)
+
+    logc_smpls = np.zeros(N_samples)
+    y_smpls = np.zeros(N_samples)
+    logc_smpls[0] = np.log(g.rvs(1))
+    y_smpls[0] = np.exp(logc_smpls[0]*x) + sig*np.random.randn()
+
+    for s in np.arange(1,N_samples):
+        if np.mod(s, 100) == 0:
+            print "Sample ", s
+        # Sample y given c
+        y_smpls[s] = np.exp(logc_smpls[s-1])*x + sig*np.random.randn()
+
+        # Sample c given y
+        logc_smpls[s], stepsz, avg_accept_rate =  \
+            hmc(lambda logc: -1.0*posterior(logc, y_smpls[s]),
+                lambda logc: -1.0*dposterior(logc, y_smpls[s]),
+                stepsz, nsteps,
+                logc_smpls[s-1].reshape((1,)),
+                avg_accept_rate=avg_accept_rate,
+                adaptive_step_sz=True)
+
+    import matplotlib.pyplot as plt
+    f = plt.figure()
+    _, bins, _ = plt.hist(np.exp(logc_smpls), 20, normed=True, alpha=0.2)
+    bincenters = 0.5*(bins[1:]+bins[:-1])
+    plt.plot(bincenters, g.pdf(bincenters), 'r--', linewidth=1)
+    plt.show()
+
+if __name__ == '__main__':
+    # test_hmc()
+    test_gamma_linear_regression_hmc()

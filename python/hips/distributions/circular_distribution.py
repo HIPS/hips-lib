@@ -138,7 +138,7 @@ class CircularDistribution(object):
         Support multiplication by a scalar
         """
         assert np.isscalar(other)
-        return CircularDistribution(self.center, self.radius, self.dr, self.dth,
+        return CircularDistribution(self.center, self.radius, self.rbins, self.thbins,
                                     self.pdf * other)
 
     def plot(self, show=False, plot_data=True, ax=None, cmap=None, alpha=None, lw=1, N_pts=300, plot_colorbar=True):
@@ -200,6 +200,9 @@ class CircularDistribution(object):
         if self.data_xy is not None and plot_data:
             x,y = self.data_xy
             ax.scatter(x,y, s=1, marker='.', c='k')
+
+        ax.set_xlim(self.center[0]-self.radius, self.center[0]+self.radius)
+        ax.set_ylim(self.center[1]-self.radius, self.center[1]+self.radius)
 
         if show:
             plt.show()

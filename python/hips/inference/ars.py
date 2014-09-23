@@ -4,6 +4,8 @@ Adaptive rejection sampling
 import numpy as np
 from scipy.misc import logsumexp
 
+
+
 def adaptive_rejection_sample(func, xs, v_xs, domain, stepsz=1.0, debug=False):
     #   Modified from Probabilistic Machine Learning Toolkit
     #   Scott Linderman,
@@ -125,6 +127,8 @@ def adaptive_rejection_sample(func, xs, v_xs, domain, stepsz=1.0, debug=False):
         rejects += 1
 
 def _add_point(xs, vxs, xp, vxp):
+
+    assert np.isfinite(vxp)
     xs = np.concatenate((xs, [xp]))
     vxs = np.concatenate((vxs, [vxp]))
     # Sort the points
@@ -148,6 +152,7 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
 
     TODO: The logic here is a big ugly... it could use some reworking.
     """
+    import pdb; pdb.set_trace()
     nsteps = 0
     if domain[0] == -np.Inf:
         # ensure the derivative on the left bound is positive
@@ -244,6 +249,158 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
 
     return xs, v_xs, domain
 
+BOUNDS_VALID = 0
+ERROR_FINITE_DOMAIN_INFINITE_FUNC = 1
+ERROR_INFINITE_DOMAIN_INFINITE_FUNC = 2
+ERROR_INFINITE_DOMAIN_INVALID_GRAD = 3
+
+def _check_bound_conditions(func, xs, v_xs, domain, side='left'):
+    valid = BOUNDS_VALID
+    if side == 'left':
+        if np.isfinite(domain[0]):
+            if not np.isfinite(func(domain[0])):
+                valid = ERROR_FINITE_DOMAIN_INFINITE_FUNC
+        else:
+            # Domain is not finite
+            assert domain == -np.inf, "Left domain must be finite or -Inf"
+
+            # Check that the function is finite at the leftmost point
+            xl = xs[0]
+            vxl = v_xs[0]
+            if not np.isfinite(v_xs[0]):
+                valid = ERROR_INFINITE_DOMAIN_INFINITE_FUNC
+            else:
+                # ensure the derivative on the left bound is positive
+                lgrad, xp, vxp = _check_grad(func, xl, vxl)
+                if lgrad < 0:
+                    valid = ERROR_INFINITE_DOMAIN_INVALID_GRAD
+
+def _update_bounds(func, xs, v_xs, domain, stepsz, side='left'):
+    """
+    Find the bounds of the function such that they satisfy the following
+    properties:
+    - If the domain is infinite, step out until we find a boundary point at which:
+        - the function is finite
+        - the gradient is of the correct sign
+
+    - If the domain is finite:
+        - ensure the function is finite at the bounds
+    """
+    if domain[0] == -np.Inf:
+
+        # Check that the function is finite at the leftmost hull point
+        xl = xs[0]
+        vxl = v_xs[0]
+
+        if not np.isfinite(vxl):
+            # Update the domain to be finite
+            domain = (xl+stepsz, domain[1])
+            return False, xs, v_xs, domain
+
+        # ensure the derivative on the left bound is positive
+        lgrad, xp, vxp = _check_grad(func, xl, vxl)
+        # Make sure the point at which we evaluated the gradient is added to the hull
+        if np.isfinite(vxp):
+            xs, v_xs = _add_point(xs, v_xs, xp, vxp)
+
+        # If the function value is not finite, move the domain in
+        if not np.isfinite(lgrad):
+            domain = (xl, domain[1])
+
+        # If the domain is still negative, move the bound further out
+        # and add this point to out set
+        elif lgrad <= 0:
+            xlr = xl
+
+    else:
+        # Finite left bound
+        # Check that the function is finite at the leftmost hull point
+        xl = xs[0]
+        vxl = v_xs[0]
+
+        if not np.isfinite(vxl):
+            # Update the domain to be finite
+            domain = (xl+stepsz, domain[1])
+            return False, xs, v_xs, domain
+
+
+        if np.isfinite(vxp):
+            xs, v_xs = _add_point(xs, v_xs, xp, vxp)
+
+
+
+
+        # If we don't have any info about how far away the left bound could be,
+        # just step out until we either find a point with a positive gradient
+        # or a point where the function is not finite
+        if not np.isfinite(domain[0]):
+            xl -= stepsz
+        # If we know that the domain is bounded (e.g. because the function doesn't
+        # evaluate to a finite number beyond some range), do binary search
+        else:
+            xl = (domain[0] + xlr) / 2.0
+
+        # Compute the gradient and function value at xl
+        lgrad, vxl, xp, vxp = _check_grad(func, xl)
+
+        if np.isfinite(vxl):
+            xs, v_xs = _add_point(xs, v_xs, xl, vxl)
+
+        if np.isfinite(vxp):
+            xs, v_xs = _add_point(xs, v_xs, xp, vxp)
+
+
+
+        # Otherwise, we've found our left bound
+
+
+    #  Check the right bound
+    if domain[1]== np.Inf:
+        xr = xs[-1]
+        vxr = v_xs[-1]
+        rgrad, xp, vxp = _check_grad(func, xr, vxr)
+
+        if np.isfinite(vxp):
+            xs, v_xs = _add_point(xs, v_xs, xp, vxp)
+
+        # Keep track of a lower bound for the right bound
+        xrl = xr
+
+        nsteps = 0
+        while rgrad >= 0 or not np.isfinite(rgrad):
+            # If we don't have any info about how far away the left bound could be,
+            # just step out until we either find a point with a positive gradient
+            # or a point where the function is not finite
+            if not np.isfinite(domain[1]):
+                xr += stepsz
+
+            # If we know that the domain is bounded (e.g. because the function doesn't
+            # evaluate to a finite number beyond some range), do binary search
+            else:
+                xr = (domain[1] + xrl) / 2.0
+
+            # Compute the gradient and function value at xl
+            rgrad, vxr, xp, vxp = _check_grad(func, xr)
+            if np.isfinite(vxr):
+                xs, v_xs = _add_point(xs, v_xs, xr, vxr)
+
+            if np.isfinite(vxp):
+                xs, v_xs = _add_point(xs, v_xs, xp, vxp)
+
+            # If the function value is not finite, move the domain in
+            if not np.isfinite(rgrad):
+                domain = (domain[0], xr)
+
+            # If the domain is still negative, move the bound further out
+            # and add this point to out set
+            elif rgrad >= 0:
+                xrl = xr
+
+            nsteps += 1
+            if nsteps > 20:
+                raise Exception("Failed to find right bound!")
+
+    return xs, v_xs, domain
 
 
 def _check_grad(func, x, vx=None, deriv_step=1e-3):
@@ -583,7 +740,7 @@ def _ars_plot(upperHull, lowerHull, domain, S, fS, func):
 
     plt.show()
 
-def test_ars():
+def test_ars_gaussian():
     """
     Test ARS on a Gaussian distribution
     """
@@ -608,5 +765,43 @@ def test_ars():
     plt.plot(bincenters, p(bincenters), 'r--', linewidth=1)
     plt.show()
 
+def test_ars_trunc_gaussian():
+    """
+    Test ARS on a truncated Gaussian distribution
+    """
+    from scipy.stats import norm
+    mu = 0
+    sig = 1
+    lb = 0.5
+    ub = np.inf
+    p = lambda x: norm(mu, sig).pdf(x) / (norm.cdf(ub) - norm.cdf(lb))
+
+    # Truncated Gaussian log pdf
+    def f(x):
+        x1d = np.atleast_1d(x)
+        lp = np.empty_like(x1d)
+        oob = (x1d < lb) | (x1d > ub)
+        lp[oob] = -np.inf
+        lp[~oob] = -0.5 * x1d[~oob]**2
+        return lp.reshape(x.shape)
+
+    import pdb; pdb.set_trace()
+    x_init = np.array([ 0.5, 0.995, 2.0])
+    v_init = f(x_init)
+
+
+
+    N_samples = 10000
+    smpls = np.zeros(N_samples)
+    for s in np.arange(N_samples):
+        smpls[s] =  adaptive_rejection_sample(f, x_init, v_init, (lb, ub), debug=False)
+
+    import matplotlib.pyplot as plt
+    f = plt.figure()
+    _, bins, _ = plt.hist(smpls, 25, normed=True, alpha=0.2)
+    bincenters = 0.5*(bins[1:]+bins[:-1])
+    plt.plot(bincenters, p(bincenters), 'r--', linewidth=1)
+    plt.show()
+
 if __name__ == '__main__':
-    test_ars()
+    test_ars_trunc_gaussian()

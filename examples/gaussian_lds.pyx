@@ -54,7 +54,7 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
         assert A.shape[1] == self.D, "Transition matrix A must be square!"
         self.sigma = sigma
 
-    cpdef sample_next(self, double[:,:,::1] z, int i_prev):
+    cpdef sample_next(self, double[:,:,::1] z, int i_prev, int[::1] ancestors):
         """ Sample the next state given the previous time index
 
             :param z:       TxNxD buffer of particle states
@@ -68,18 +68,19 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
         cdef int n, d, d1, d2
 
         # Preallocate random variables
-        cdef np.ndarray[np.float_t,
-                        ndim=2,
-                        negative_indices=False,
-                        mode='c'] rands = \
-            np.random.randn(N, D)
+        # cdef np.ndarray[np.float_t,
+        #                 ndim=2,
+        #                 negative_indices=False,
+        #                 mode='c'] rands = \
+        #     np.random.randn(N, D)
+        cdef double[:,::1] rands = np.random.randn(N,D)
 
         for n in range(N):
             # TODO: Use a real matrix multiplication library
             for d1 in range(D):
                 z[i_prev+1, n, d1] = 0
                 for d2 in range(D):
-                    z[i_prev+1, n, d1] += self.A[d1,d2] * z[i_prev,n,d2]
+                    z[i_prev+1, n, d1] += self.A[d1,d2] * z[i_prev,ancestors[n],d2]
 
             # TODO: Debug compiler issue with inplace operators
             # z[i_prev+1, n, :] = z[i_prev+1, n, :] + self.sigma * np.random.randn(self.D)
@@ -120,7 +121,7 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
             lp[n] = -0.5/self.sigma**2 * sqerr
 
 
-cdef class GaussianLikelihood(Likelihood):
+cdef class LinearGaussianLikelihood(Likelihood):
     """
     General wrapper for a likelihood object.
     It must support efficient calculation of the log

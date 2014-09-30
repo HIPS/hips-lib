@@ -42,8 +42,11 @@ cpdef int log_sum_exp_sample(double[::1] lnp):
 
     cdef double[::1] p = np.zeros(N,)
     log_sum_exp_normalize(lnp, p)
-    
+    return discrete_sample(p)
+
+cpdef int discrete_sample(double[::1] p):
     # Randomly sample from p
+    cdef int N = p.shape[0]
     cdef int choice = -1
     cdef double u = np.random.rand()
     cdef double acc = 0.0
@@ -51,8 +54,5 @@ cpdef int log_sum_exp_sample(double[::1] lnp):
         acc += p[n]
         if u <= acc:
             choice = n
-    
-    # if choice == -1:
-    #     raise Exception("Invalid choice in logSumExp!")
-    
+
     return choice

@@ -6,7 +6,7 @@ from gaussian_lds import *
 from hips.inference.particle_mcmc import *
 
 def sample_gaussian_lds(plot=False):
-    T = 25
+    T = 15
     N = 1
     D = 2
     dt = 1
@@ -16,26 +16,24 @@ def sample_gaussian_lds(plot=False):
     th = np.pi/12.0
     A = np.array([[np.cos(th), -np.sin(th)],
                   [np.sin(th),  np.cos(th)]])
-    sigma = 0.25
+    sigma = 0.1
 
     # Direct observation matrix
     C = np.eye(D)
-    eta = 0.1
+    eta = 0.2
 
-    init = GaussianInitialDistribution(np.ones(D), np.eye(D))
+    init = GaussianInitialDistribution(np.ones(D), 1*np.eye(D))
     prop = LinearGaussianDynamicalSystemProposal(A, sigma)
-    lkhd = GaussianLikelihood(C, eta)
+    lkhd = LinearGaussianLikelihood(C, eta)
     z = np.zeros((T,N,D))
     z[0,0,:] = init.sample()
     x = np.zeros((T,D))
 
-    # DBG
-    # buff = np.ones((D,))
-    # prop.test_dot(z, 0, buff)
-    # print buff
-
+    # Sample the latent state sequence
     for i in np.arange(0,T-1):
-        prop.sample_next(z, i)
+        # The interface kinda sucks. We have to tell it that
+        # the first particle is always its ancestor
+        prop.sample_next(z, i, np.array([0], dtype=np.int32))
 
     # Sample observations
     for i in np.arange(0,T):
@@ -51,6 +49,8 @@ def sample_gaussian_lds(plot=False):
         fig.add_subplot(111, aspect='equal')
         plt.plot(z[:,0], z[:,1],'k')
         plt.plot(x[:,0], x[:,1], 'ro')
+        plt.plot(z[0,0], z[0,1], 'ko', markersize=12, markerfacecolor='none')
+        plt.plot(z[-1,0], z[-1,1], 'x', markersize=12, markerfacecolor='none')
 
     return z, x, init, prop, lkhd
 
@@ -65,9 +65,11 @@ def sample_z_given_x(z_curr, x,
     pf = ParticleGibbsAncestorSampling(T, N_particles, D)
     pf.initialize(init, prop, lkhd, x, z_curr)
 
-    S = 100
+    S = 500
     z_smpls = np.zeros((S,T,D))
     for s in range(S):
+        # Reinitialize with the previous particle
+        pf.initialize(init, prop, lkhd, x, z_smpls[s,:,:])
         z_smpls[s,:,:] = pf.sample()
 
     z_mean = z_smpls.mean(axis=0)
@@ -79,8 +81,15 @@ def sample_z_given_x(z_curr, x,
 
     # import pdb; pdb.set_trace()
     if plot:
-        plt.gca().add_patch(Polygon(z_env, facecolor='b', alpha=0.5, edgecolor='none'))
-        plt.plot(z_mean[:,0], z_mean[:,1], 'b')
+        plt.gca().add_patch(Polygon(z_env, facecolor='b', alpha=0.25, edgecolor='none'))
+        plt.plot(z_mean[:,0], z_mean[:,1], 'b', lw=2)
+
+
+        # Plot a few random samples
+        for s in range(10):
+            si = np.random.randint(S)
+            plt.plot(z_smpls[si,:,0], z_smpls[si,:,1], '-b', lw=0.5)
+
         plt.ioff()
         plt.show()
 

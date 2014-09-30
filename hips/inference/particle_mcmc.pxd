@@ -5,7 +5,7 @@ cdef class InitialDistribution(object):
 cdef class Proposal:
     cdef public double[::1] ts
 
-    cpdef sample_next(self, double[:,:,::1] z, int i_prev)
+    cpdef sample_next(self, double[:,:,::1] z, int i_prev, int[::1] ancestors)
     cpdef logp(self, double[:,::1] z_prev, int i_prev, double[::1] z_curr, double[::1] lp)
 
 
@@ -34,7 +34,5 @@ cdef class ParticleGibbsAncestorSampling(object):
     cpdef double[:,::1] sample(self)
 
     cpdef double[:,::1] get_trajectory(self, int n)
-
-    cdef _resample_particles(self, int t)
 
     cdef systematic_resampling(self, int t, int[::1] ancestors)

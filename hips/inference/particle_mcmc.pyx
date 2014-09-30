@@ -4,10 +4,12 @@
 import numpy as np
 from scipy.misc import logsumexp
 
-from log_sum_exp_sample import log_sum_exp_sample, log_sum_exp_normalize
+from log_sum_exp import log_sum_exp_sample, log_sum_exp_normalize, discrete_sample
 
 import numpy as np
 cimport numpy as np
+
+from libc.math cimport log
 
 cdef class InitialDistribution(object):
     """
@@ -29,11 +31,12 @@ cdef class Proposal:
     # ts:   Length T vector of times at which the proposals will be sampled
     # cdef public double[::1] ts
 
-    cpdef sample_next(self, double[:,:,::1] z, int i_prev):
+    cpdef sample_next(self, double[:,:,::1] z, int i_prev, int[::1] ancestors):
         """ Sample the next state given the previous time index
 
             :param z:       TxNxD buffer of particle states
             :param i_prev:  Time index into z and self.ts
+            :param ancestors: The indices in z[i_prev,:,:] of the particles to propagate
 
             :return         z[i_prev+1,:,:] is updated with a sample
                             from the proposal distribution.
@@ -138,9 +141,9 @@ cdef class ParticleGibbsAncestorSampling(object):
         D:           Dimensionality of latent state space
         """
         # Initialize data structures for particles and weights
-        self.D = D
         self.T = T
         self.N = N
+        self.D = D
 
         self.z = np.zeros((T,N,D), dtype=np.float)
         self.ancestors = np.zeros((T,N), dtype=np.int32)
@@ -175,24 +178,21 @@ cdef class ParticleGibbsAncestorSampling(object):
         self.z[:,0,:] = self.fixed_particle
         # Sample the initial state
         self.z[0,1:,:] = init.sample(N=self.N-1)
-        # cdef np.ndarray[double, ndim=2] tmp = init.sample(N=self.N-1)
-        # cdef int n, d
-        # for n in range(0,self.N-1):
-        #     for d in range(self.D):
-        #         self.z[0,1+n,d] = tmp[n,d]
 
+        # TODO: Should also factor in probability under the initial distribution
         # Initialize weights according to observation likelihood
-        cdef np.ndarray[double, ndim=1] ll0 = np.zeros(self.N, dtype=np.float)
+        cdef double[::1] ll0 = np.zeros(self.N)
         self.lkhd.logp(self.z, self.x, 0, ll0)
-        cdef double lse_ll0 = logsumexp(ll0)
 
-        for n in range(self.N):
-            self.weights[0,n] = np.exp(ll0[n] - lse_ll0)
-
-        cdef double w_tot = np.sum(self.weights[0,:])
-        for n in range(self.N):
-            self.weights[0,n] = self.weights[0,n] / w_tot
-
+        log_sum_exp_normalize(ll0, self.weights[0,:])
+        # cdef double lse_ll0 = logsumexp(ll0)
+        #
+        # for n in range(self.N):
+        #     self.weights[0,n] = np.exp(ll0[n] - lse_ll0)
+        #
+        # cdef double w_tot = np.sum(self.weights[0,:])
+        # for n in range(self.N):
+        #     self.weights[0,n] = self.weights[0,n] / w_tot
 
     cpdef double[:,::1] sample(self):
         """
@@ -200,41 +200,35 @@ cdef class ParticleGibbsAncestorSampling(object):
         """
 
         # Allocate memory
-        cdef double[::1] lp_trans = np.zeros((self.N))
-        cdef double[::1] ll_obs = np.zeros((self.N,))
-        cdef double[::1] w_as
-        cdef double[::1] w = np.empty((self.N,))
+        cdef double[::1] lp_trans = np.zeros(self.N)
+        cdef double[::1] ll_obs = np.zeros(self.N)
         cdef int t, n
 
-        # DEBUG: This should eventually be set to T
-        cdef int N_steps = self.T
-        # for t in range(1, self.T):
-        for t in range(1, N_steps):
+        for t in range(1, self.T):
             # First, resample the previous parents
-            self._resample_particles(t-1)
+            self.systematic_resampling(t, self.ancestors[t,:])
 
             # Move each particle forward according to the proposal distribution
-            self.prop.sample_next(self.z, t-1)
+            self.prop.sample_next(self.z, t-1, self.ancestors[t,:])
 
             # Override the first particle with the fixed particle
             self.z[t,0,:] = self.fixed_particle[t,:]
 
             # Resample the parent index of the fixed particle
+            # TODO: Does the parent get to choose from all particles or only the resampled particles?
             self.prop.logp(self.z[t-1,:,:], t-1, self.z[t,0,:], lp_trans)
-            lp_trans += np.log(self.weights[t-1,:])
+            for n in range(self.N):
+                lp_trans[n] += log(self.weights[t-1,n])
 
             self.ancestors[t,0] = log_sum_exp_sample(lp_trans)
 
             # Update the weights. Since we sample from the prior,
             # the particle weights are always just a function of the likelihood
             self.lkhd.logp(self.z, self.x, t, ll_obs)
-            log_sum_exp_normalize(ll_obs, w)
-            # w = np.exp(ll_obs - logsumexp(ll_obs))
-            # w /= np.sum(w)
-            self.weights[t,:] = w
+            log_sum_exp_normalize(ll_obs, self.weights[t,:])
 
         # Sample a trajectory according to the final weights
-        n = np.random.choice(np.arange(self.N), p=self.weights[N_steps-1,:])
+        n = discrete_sample(self.weights[self.T-1,:])
         return self.get_trajectory(n)
 
     cpdef double[:,::1] get_trajectory(self, int n):
@@ -245,28 +239,10 @@ cdef class ParticleGibbsAncestorSampling(object):
         traj[T-1,:] = self.z[T-1,n,:]
         cdef int curr_ancestor = self.ancestors[T-1,n]
 
-        for t in range(T-1,-1,-1):
+        for t in range(T-2,-1,-1):
             traj[t,:] = self.z[t,curr_ancestor,:]
             curr_ancestor = self.ancestors[t,curr_ancestor]
         return traj
-
-    cdef _resample_particles(self, int t):
-        # Get a set of resampled parents, or sources
-        cdef int[::1] ancestors = np.empty(self.N, dtype=np.int32)
-        # cdef int[::1] sources = self._lowvariance_sources(self.weights[t,:], self.N)
-        self.systematic_resampling(t, ancestors)
-
-        # First pass: copy the parents into a buffer
-        cdef double[:,::1] buffer = np.empty((self.N, self.D))
-        cdef int n, d
-        for n in range(self.N):
-            for d in range(self.D):
-                buffer[n,d] = self.z[t,ancestors[n],d]
-
-        # Second pass: put the resampled parents back
-        for n in range(self.N):
-            for d in range(self.D):
-                self.z[t,n,d] = buffer[n,d]
 
     cdef systematic_resampling(self, int t, int[::1] ancestors):
         """
@@ -285,16 +261,19 @@ cdef class ParticleGibbsAncestorSampling(object):
             u_shift ~ U[0,1]
             u_n = (n + u_shift)/N
         """
+        # Compute the CDF of the weights at the previous time bin
+        cdef double[::1] cdf = np.empty(self.N)
+        cdef int n
+        cdf[0] = self.weights[t-1,0]
+        for n in range(1,self.N):
+            cdf[n] = cdf[n-1] + self.weights[t-1,n]
+
         # First sample a global u_shift
         cdef double u_shift = np.random.rand()
-
-        # Compute the CDF of the weights
-        cdef double[::1] cdf = np.cumsum(self.weights[t,:])
 
         # Now go through each ancestor. Since the u_n's are necessarily increasing
         # in the systematic resampling method, we can perform this with a simple loop
         cdef int offset = 0
-        cdef int n
         cdef double u_n
         for n in range(self.N):
             u_n = (n + u_shift)/self.N

@@ -2,8 +2,6 @@
 # cython: profile=True
 
 import numpy as np
-from scipy.misc import logsumexp
-
 from log_sum_exp import log_sum_exp_sample, log_sum_exp_normalize, discrete_sample
 
 import numpy as np
@@ -56,34 +54,6 @@ cdef class Proposal:
                             from the proposal distribution.
         """
         pass
-
-# class DynamicalSystemProposal(Proposal):
-#     def __init__(self, dzdt, noiseclass):
-#         self.dzdt = dzdt
-#         self.noisesampler = noiseclass
-#
-#     def sample_next(self, t_prev, Z_prev, t_next):
-#         assert t_next >= t_prev
-#         D,Np = Z_prev.shape
-#         z = Z_prev + self.dzdt(t_prev, Z_prev) * (t_next-t_prev)
-#
-#         # Scale down the noise to account for time delay
-#         dt = self.t[t_next] - self.t[t_prev]
-#         sig = self.sigma * dt
-#         noise = self.noisesampler.sample(Np=Np, sigma=sig)
-#         logp = self.noisesampler.logp(noise)
-#
-#         state = {'z' : z}
-#         return z + noise, logp, state
-#
-#     def logp(self, t_prev, Z_prev, t_next, Z_next, state=None):
-#         if state is not None and 'z' in state:
-#             z = state['z']
-#         else:
-#             # Recompute
-#             z = Z_prev + self.dzdt(t_prev, Z_prev) * (t_next - t_prev)
-#         return self.noisesampler.logp((Z_next-z)/np.sqrt(t_next-t_prev))
-
 
 cdef class Likelihood:
     """
@@ -166,6 +136,7 @@ cdef class ParticleGibbsAncestorSampling(object):
         # Set the observations
         assert x.shape[0] == self.T and x.ndim == 2, "Invalid observation shape"
         self.x = x
+        self.init = init
         self.prop = prop
         self.lkhd = lkhd
 
@@ -183,16 +154,7 @@ cdef class ParticleGibbsAncestorSampling(object):
         # Initialize weights according to observation likelihood
         cdef double[::1] ll0 = np.zeros(self.N)
         self.lkhd.logp(self.z, self.x, 0, ll0)
-
         log_sum_exp_normalize(ll0, self.weights[0,:])
-        # cdef double lse_ll0 = logsumexp(ll0)
-        #
-        # for n in range(self.N):
-        #     self.weights[0,n] = np.exp(ll0[n] - lse_ll0)
-        #
-        # cdef double w_tot = np.sum(self.weights[0,:])
-        # for n in range(self.N):
-        #     self.weights[0,n] = self.weights[0,n] / w_tot
 
     cpdef double[:,::1] sample(self):
         """
@@ -206,7 +168,7 @@ cdef class ParticleGibbsAncestorSampling(object):
 
         for t in range(1, self.T):
             # First, resample the previous parents
-            self.systematic_resampling(t, self.ancestors[t,:])
+            self.systematic_resampling(t)
 
             # Move each particle forward according to the proposal distribution
             self.prop.sample_next(self.z, t-1, self.ancestors[t,:])
@@ -244,7 +206,7 @@ cdef class ParticleGibbsAncestorSampling(object):
             curr_ancestor = self.ancestors[t,curr_ancestor]
         return traj
 
-    cdef systematic_resampling(self, int t, int[::1] ancestors):
+    cdef systematic_resampling(self, int t):
         """
         Resample particles using the "systematic resampling" method.
         We sample a single random number, u, as a shift in the CDF
@@ -284,4 +246,4 @@ cdef class ParticleGibbsAncestorSampling(object):
             # but by design this means offset = N-1
             while offset < self.N-1 and cdf[offset] < u_n:
                 offset += 1
-            ancestors[n] = offset
+            self.ancestors[t,n] = offset

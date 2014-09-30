@@ -172,7 +172,6 @@ cdef class ParticleGibbsAncestorSampling(object):
         # Compute the i-th trajectory from the particles and ancestors
         cdef int T = self.T
         cdef double[:,::1] traj = np.zeros((T, self.D))
-        # traj = np.zeros((T, self.D))
         traj[T-1,:] = self.z[T-1,n,:]
         cdef int curr_ancestor = self.ancestors[T-1,n]
 

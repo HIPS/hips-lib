@@ -78,27 +78,6 @@ cdef class ParticleGibbsAncestorSampling(object):
     A conditional particle filter with ancestor sampling
     """
     # Class variables are defined in the pxd file
-    # TxNxD buffer of latent state particles to be filled in
-    # T:    number of time bins
-    # N:    number of particles
-    # D:    dimensionality of each particle
-    # cdef public double[:,:,::1] z
-    #
-    # cdef public double[:,::1] fixed_particle
-    #
-    # # TxO buffer of observations
-    # # O:    dimensionality of each observation
-    # cdef public double[:,::1] x
-    #
-    # # TxN buffer of "ancestors" of each particle
-    # cdef public int[:,::1] ancestors
-    #
-    # # TxN buffer of "weights" of each particle
-    # cdef public double[:,::1] weights
-    #
-    # cdef Proposal prop
-    # cdef Likelihood lkhd
-
     def __init__(self, int T, int N, int D):
         """
         Initialize the particle filter with:

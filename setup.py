@@ -10,15 +10,13 @@ setup(name='HIPS-Lib',
       author='Scott Linderman',
       author_email='slinderman@seas.harvard.edu',
       url='http://www.github.com/HIPS/hips-lib',
-      package_dir={'' : 'python'},
+      # package_dir={'' : 'python'},
       packages=['hips',
                 'hips.distributions',
                 'hips.inference',
                 'hips.movies',
                 'hips.plotting'],
+      ext_modules=cythonize('**/*.pyx'),
+      include_dirs=[np.get_include(),],
      )
 
-setup(
-    ext_modules=cythonize('**/*.pyx'),
-    include_dirs=[np.get_include(),],
-)

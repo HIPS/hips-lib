@@ -1,9 +1,8 @@
 # cython: profile=True
 
 """
-A simple demo of a particle MCMC implementation
+A simple demo of a particle MCMC implementation with cython
 """
-# from hips.inference.particle_mcmc import InitialDistribution
 from hips.inference.particle_mcmc cimport InitialDistribution, Proposal, Likelihood, ParticleGibbsAncestorSampling
 
 import numpy as np
@@ -65,30 +64,21 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
         """
         cdef int N = z.shape[1]
         cdef int D = z.shape[2]
-        cdef int n, d, d1, d2
+        cdef int n, d1, d2
 
         # Preallocate random variables
-        # cdef np.ndarray[np.float_t,
-        #                 ndim=2,
-        #                 negative_indices=False,
-        #                 mode='c'] rands = \
-        #     np.random.randn(N, D)
         cdef double[:,::1] rands = np.random.randn(N,D)
 
         for n in range(N):
             # TODO: Use a real matrix multiplication library
             for d1 in range(D):
+                # z_t = A*z_{t-1} + noise
                 z[i_prev+1, n, d1] = 0
                 for d2 in range(D):
                     z[i_prev+1, n, d1] += self.A[d1,d2] * z[i_prev,ancestors[n],d2]
 
-            # TODO: Debug compiler issue with inplace operators
-            # z[i_prev+1, n, :] = z[i_prev+1, n, :] + self.sigma * np.random.randn(self.D)
-            # tmp = self.sigma * np.random.randn(self.D)
-            for d in range(D):
-                # z[i_prev+1, n, d] = z[i_prev+1, n, d] + tmp[d]
-                # z[i_prev+1, n, d] += self.sigma * np.random.randn()
-                z[i_prev+1, n, d] += self.sigma * rands[n,d]
+                # Add noise
+                z[i_prev+1, n, d1] += self.sigma * rands[n,d1]
 
 
     cpdef logp(self, double[:,::1] z_prev, int i_prev, double[::1] z_curr, double[::1] lp):
@@ -114,7 +104,6 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
                 for d2 in range(D):
                     z_mean[d1] += self.A[d1,d2] * z_prev[n,d2]
 
-            # z_mean = np.dot(self.A, z_prev[n,:])
             sqerr = 0
             for d in range(D):
                 sqerr += (z_curr[d] - z_mean[d])**2
@@ -160,7 +149,6 @@ cdef class LinearGaussianLikelihood(Likelihood):
                 for d2 in range(self.D):
                     x_mean[o1] += self.C[o1,d2] * z[i,n,d2]
 
-            # x_mean = np.dot(self.C, z[i,n,:])
             sqerr = 0
             for o in range(self.O):
                 sqerr += (x[i,o] - x_mean[o])**2
@@ -183,74 +171,3 @@ cdef class LinearGaussianLikelihood(Likelihood):
 
         for o in range(self.O):
             x[i,o] = x_mean[o] + noise[o]
-
-# def create_gaussian_lds(D, dt, sig_init,  sig_trans, sig_obs):
-#     if D == 1:
-#         A = 0.75
-#     elif D == 2:
-#         th = np.pi/3.0
-#         A = np.array([[np.cos(th), -np.sin(th)],
-#                       [np.sin(th),  np.cos(th)]])
-#     else:
-#         assert np.mod(D, 2) == 0
-#
-#         ths = np.random.rand(D/2) * 2*np.pi
-#
-#         A = np.zeros((D,D))
-#         for i in range(D/2):
-#             th = ths[i]
-#             A[i*2:(i+1)*2] = np.array([[np.cos(th), -np.sin(th)],
-#                                        [np.sin(th),  np.cos(th)]])
-#
-#
-#     # Try to fit it with a particle filter
-#     p_initial = SphericalGaussianDistribution(D, sig=sig_init)
-#     lkhd = NoiseLikelihood(SphericalGaussianDistribution(D, sig=sig_obs))
-#     prop = DynamicalSystemProposal(lambda t,z: np.dot(A-np.eye(D),z)/dt,
-#                                    SphericalGaussianDistribution(D, sig=sig_trans))
-#
-#     return A, p_initial, lkhd, prop
-#
-# def sample_x_given_z(z, lkhd):
-#     x = lkhd.sample(z)
-#     return x
-#
-# def sample_z_given_x(x, z_curr, dt,
-#                      p_initial, lkhd, prop,
-#                      N_particles=100):
-#     D,T = x.shape
-#     t = dt*np.arange(T)
-#
-#     pf = ConditionalParticleFilterWithAncestorSampling(D, T, t[0],
-#                                                        x[:,0],
-#                                                        prop, lkhd, p_initial, z_curr,
-#                                                        Np=N_particles)
-#
-#     # pf = ConditionalParticleFilter(D, T, t[0],
-#     #                                x[:,0],
-#     #                                prop, lkhd, p_initial, z_curr,
-#     #                                Np=N_particles)
-#
-#     for ind in np.arange(1,T):
-#         t_curr = t[ind]
-#         x_curr = x[:,ind]
-#         pf.filter(t_curr, x_curr)
-#
-#     # Sample a particular weight trace given the particle weights at time T
-#     i = np.sum(np.cumsum(pf.trajectory_weights) < np.random.rand()) - 1
-#
-#     trajs = pf.trajectories
-#     z = trajs[:,i,:].reshape((D,T))
-#
-#     # plot_geweke_single_iter(trajs, z, x)
-#
-#     return z
-#
-# def sample_z_prior(D, T, dt,  p_initial, prop):
-#     # Sample from prior
-#     t = dt * np.arange(T)
-#     z = np.zeros((D,T))
-#     z[:,0] = p_initial.sample()
-#     for i in np.arange(1,T):
-#         z[:,i] = prop.sample_next(t[i-1], z[:,i-1], t[i])
-#     return z

@@ -3,8 +3,6 @@ cdef class InitialDistribution(object):
 
 
 cdef class Proposal:
-    cdef public double[::1] ts
-
     cpdef sample_next(self, double[:,:,::1] z, int i_prev, int[::1] ancestors)
     cpdef logp(self, double[:,::1] z_prev, int i_prev, double[::1] z_curr, double[::1] lp)
 

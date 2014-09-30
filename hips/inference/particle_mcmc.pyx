@@ -25,10 +25,6 @@ cdef class Proposal:
     It must support efficient log likelihood calculations and sampling.
     Extend this for the proposal of interest
     """
-
-    # ts:   Length T vector of times at which the proposals will be sampled
-    # cdef public double[::1] ts
-
     cpdef sample_next(self, double[:,:,::1] z, int i_prev, int[::1] ancestors):
         """ Sample the next state given the previous time index
 

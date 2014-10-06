@@ -18,7 +18,8 @@ def hmc(U,
         avg_accept_time_const=0.95,
         avg_accept_rate=0.9,
         min_step_sz=0.001,
-        max_step_sz=1.0):
+        max_step_sz=1.0,
+        negative_log_prob=True):
     """
     U       - function handle to compute log probability we are sampling
     grad_U  - function handle to compute the gradient of the density with respect 
@@ -26,20 +27,25 @@ def hmc(U,
     step_sz - step size
     n_steps       - number of steps to take
     q_curr  - current state
+
+    negative_log_prob   - If True, assume U is the negative log prob
     
     """
     # Start at current state
     q = np.copy(q_curr)
     # Momentum is simplest for a normal rv
-    p = np.random.randn(np.size(q))
+    p = np.random.randn(*np.shape(q))
     p_curr = np.copy(p)
-    
+
+    # Set a prefactor of -1 if given log prob instead of negative log prob
+    pre = 1.0 if negative_log_prob else -1.0
+
     # Evaluate potential and kinetic energies at start of trajectory
-    U_curr = U(q_curr)
+    U_curr = pre * U(q_curr)
     K_curr = np.sum(p_curr**2)/2.0
-    
+
     # Make a half step in the momentum variable
-    p -= step_sz*grad_U(q)/2.0
+    p -= step_sz * pre * grad_U(q)/2.0
     
     # Alternate L full steps for position and momentum
     for i in np.arange(n_steps):
@@ -47,15 +53,15 @@ def hmc(U,
         
         # Full step for momentum except for last iteration
         if i < n_steps-1:
-            p -= step_sz*grad_U(q)
+            p -= step_sz * pre * grad_U(q)
         else:
-            p -= step_sz*grad_U(q)/2.0
+            p -= step_sz * pre * grad_U(q)/2.0
     
     # Negate the momentum at the end of the trajectory to make proposal symmetric?
     p = -p
     
     # Evaluate potential and kinetic energies at end of trajectory
-    U_prop = U(q)
+    U_prop = pre * U(q)
     K_prop = np.sum(p**2)/2.0
     
     # Accept or reject new state with probability proportional to change in energy.
@@ -102,7 +108,8 @@ def test_hmc():
         smpls[s] = hmc(lambda x: -1.0*f(x),
                        lambda x: -1.0*grad_f(x),
                        0.1, 10,
-                       np.atleast_1d(smpls[s-1]))
+                       np.atleast_1d(smpls[s-1]),
+                       negative_log_prob=True)
     import matplotlib.pyplot as plt
     f = plt.figure()
     _, bins, _ = plt.hist(smpls, 20, normed=True, alpha=0.2)
@@ -162,5 +169,5 @@ def test_gamma_linear_regression_hmc():
     plt.show()
 
 if __name__ == '__main__':
-    # test_hmc()
-    test_gamma_linear_regression_hmc()
+    test_hmc()
+    # test_gamma_linear_regression_hmc()

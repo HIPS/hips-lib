@@ -6,7 +6,7 @@ from gaussian_lds import *
 from hips.inference.particle_mcmc import *
 
 def sample_gaussian_lds(plot=False):
-    T = 15
+    T = 1000
     N = 1
     D = 2
     dt = 1

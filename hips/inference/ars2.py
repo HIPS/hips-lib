@@ -18,7 +18,7 @@ class AdaptiveRejectionSampler:
     """
     Class to perform adaptive rejection sampling and keep track of a hull of points.
     """
-    def __init__(self, func, lb, ub, initial_points=None, initial_values=None):
+    def __init__(self, func, lb, ub, initial_points=None, initial_values=None, stepsz=1.0):
         """
         Initialize the sampler
         """
@@ -41,7 +41,7 @@ class AdaptiveRejectionSampler:
                 raise Exception('Invalid initial points')
             self._add_hull_point(x, v)
 
-        self.initialize_hull_points_and_domain()
+        self.initialize_hull_points_and_domain(stepsz)
 
         # initialize a mesh on which to create upper & lower hulls with at least 5 points
 
@@ -270,6 +270,7 @@ class AdaptiveRejectionSampler:
             ix = (b1-b2)/(m2-m1)
             if not (ix >= S[li] and ix <= S[li+1]):
                 import pdb; pdb.set_trace()
+                _ars_plot(upperHull, lowerHull, self.lb, self.ub, S, fS, self.func)
 
             # pro = np.exp(b1)/m1 * ( np.exp(m1*ix) - np.exp(m1*S[li]) )
             lnpr1 = _signed_lse(m1, b1, ix, S[li])
@@ -466,7 +467,7 @@ def _signed_lse(m, b, a1, a0):
 
     return lse
 
-def _ars_plot(upperHull, lowerHull, domain, S, fS, func):
+def _ars_plot(upperHull, lowerHull, lb, ub, S, fS, func):
     import matplotlib.pyplot as plt
 
     Swidth = S[-1]-S[0]
@@ -474,9 +475,9 @@ def _ars_plot(upperHull, lowerHull, domain, S, fS, func):
     ext = 0.15*Swidth; # plot this much before a and past b, if the domain is infinite
 
     left = S[0]; right = S[-1]
-    if np.isinf(domain[0]):
+    if np.isinf(lb):
         left -= ext
-    if np.isinf(domain[1]):
+    if np.isinf(ub):
         right += ext
 
     x = np.arange(left, right, plotStep)
@@ -498,7 +499,7 @@ def _ars_plot(upperHull, lowerHull, domain, S, fS, func):
     # plot upper bound
 
     # first line (from -infinity)
-    if np.isinf(domain[0]):
+    if np.isinf(lb):
         x = np.arange(upperHull[0].right-ext, upperHull[0].right, plotStep)
         m = upperHull[0].m
         b = upperHull[0].b
@@ -513,7 +514,7 @@ def _ars_plot(upperHull, lowerHull, domain, S, fS, func):
         plt.plot( x, x*m+b, 'r-')
 
     # last line (to infinity)
-    if np.isinf(domain[1]):
+    if np.isinf(ub):
         x = np.arange(upperHull[-1].left, (upperHull[-1].left+ext), plotStep)
         m = upperHull[-1].m
         b = upperHull[-1].b

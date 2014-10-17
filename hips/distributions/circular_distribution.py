@@ -16,7 +16,7 @@ class CircularDistribution(object):
         assert self.center.size == 2
         self.radius = radius
 
-        # Create a grid of r's and thetas
+        # Create a grid of r's and thetas.
         self.rbins = rbins
         self.thbins = thbins
         self.rs = np.sqrt(np.linspace(0, radius**2, rbins+1))
@@ -99,6 +99,53 @@ class CircularDistribution(object):
         self.pdf = bins/float(N)/self.areas
 
         assert np.allclose((self.pdf * self.areas).sum(), 1.0)
+
+    def bin_xy(self, x, y):
+        """
+        Bin a dataset of x,y locations
+        """
+        N = len(x)
+        assert len(y)==N, "x and y must be of the same length"
+
+        if N == 0:
+            # print "WARNING: Attempting to fit to zero datapoints"
+            return
+
+        xc = x - self.center[0]
+        yc = y - self.center[1]
+
+        pos_r = np.sqrt(xc**2 + yc**2)
+
+        if np.any(pos_r > self.radius):
+            # print "WARNING: Points found outside limits of circle! Truncating..."
+            pos_r = np.clip(pos_r, 0, self.radius)
+
+        pos_th = np.arctan2(yc, xc)
+
+        return self.bin_polar(pos_r, pos_th)
+
+    def bin_polar(self, pos_r, pos_th):
+        N = len(pos_r)
+        assert len(pos_th)==N, "r and th must be of the same length"
+
+        # allocate space for bin indices
+        bins = -1 * np.ones((N,2), dtype=np.int)
+        for i,rl in enumerate(self.rs[:-1]):
+            for j,thl in enumerate(self.ths[:-1]):
+                ru = self.rs[i+1]
+                thu = self.ths[j+1]
+
+                # Find indices that are in this bin
+                in_bin = ((pos_r > rl) * (pos_r <= ru) *
+                          (pos_th > thl) * (pos_th <= thu))
+
+                bins[in_bin, 0] = np.int(i)
+                bins[in_bin, 1] = np.int(j)
+
+        # Make sure we counted all the points
+        assert np.all(bins >= 0)
+
+        return bins
 
     @property
     def mean(self):

@@ -1,5 +1,9 @@
-# encoding: utf-8
-# cython: profile=True
+# distutils: extra_compile_args = -O3
+# cython: wraparound=False 
+# cython: boundscheck=False
+# cython: nonecheck=False
+# cython: cdivision=True
+## cython: profile=True
 
 import numpy as np
 from log_sum_exp import log_sum_exp_sample, log_sum_exp_normalize, discrete_sample
@@ -100,6 +104,7 @@ cdef class ParticleGibbsAncestorSampling(object):
                      Proposal prop,
                      Likelihood lkhd,
                      double[:,::1] x,
+
                      double[:,::1] fixed_particle):
         """
 

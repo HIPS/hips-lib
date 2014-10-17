@@ -1,5 +1,8 @@
-# cython: profile=True
-
+# distutils: extra_compile_args = -O3
+# cython: wraparound=False 
+# cython: boundscheck=False
+# cython: nonecheck=False
+## cython: cdivision=True
 """
 A simple demo of a particle MCMC implementation with cython
 """
@@ -101,6 +104,7 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
         for n in range(N):
             # Compute z_mean = dot(self.A, z_prev[n,:]
             for d1 in range(D):
+                z_mean[d1] = 0
                 for d2 in range(D):
                     z_mean[d1] += self.A[d1,d2] * z_prev[n,d2]
 

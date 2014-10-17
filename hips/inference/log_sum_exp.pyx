@@ -1,4 +1,9 @@
-# cython: profile=True
+# distutils: extra_compile_args = -O3
+# cython: wraparound=False 
+# cython: boundscheck=False
+# cython: nonecheck=False
+# cython: cdivision=True
+## cython: profile=True
 
 import numpy as np
 cimport numpy as np

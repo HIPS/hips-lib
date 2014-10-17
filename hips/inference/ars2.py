@@ -108,9 +108,9 @@ class AdaptiveRejectionSampler:
                 assert np.isfinite(vxp)
                 self._add_hull_point(xp, vxp)
 
-                # If the gradient is not positive, try to step left
+                # If the gradient is not negative, try to step right
                 if rgrad > 0:
-                    xr = right_hull_pnt - stepsz
+                    xr = right_hull_pnt + stepsz
 
                     # Before updating the hull, check that the function is valid here
                     vxr = self.func(xr)
@@ -177,7 +177,6 @@ class AdaptiveRejectionSampler:
 
 
     def _add_hull_point(self, xp, vxp):
-
         assert np.isfinite(vxp)
         xs = np.concatenate((self.hull_points, [xp]))
         vxs = np.concatenate((self.hull_values, [vxp]))
@@ -186,9 +185,12 @@ class AdaptiveRejectionSampler:
         self.hull_points = xs[perm]
         self.hull_values = vxs[perm]
 
+        if len(self.hull_points) > 40:
+            import pdb; pdb.set_trace()
 
 
-    def _check_grad(self, x, vx=None, deriv_step=1e-3):
+
+    def _check_grad(self, x, vx=None, deriv_step=1e-5):
         # Check gradients at left and right boundary of domain
         dx = deriv_step + 1e-8*np.random.randn()
         xp = x + dx

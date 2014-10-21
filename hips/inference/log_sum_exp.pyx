@@ -59,5 +59,6 @@ cpdef int discrete_sample(double[::1] p):
         acc += p[n]
         if u <= acc:
             choice = n
+            break
 
     return choice

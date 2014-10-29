@@ -91,6 +91,7 @@ class AdaptiveRejectionSampler:
                         continue
                     # If the function is not finite, move our domain in
                     else:
+                        print "Found left bound at ", left_hull_pnt
                         self.lb = left_hull_pnt
             left_initialized = True
 
@@ -190,7 +191,7 @@ class AdaptiveRejectionSampler:
 
 
 
-    def _check_grad(self, x, vx=None, deriv_step=1e-5):
+    def _check_grad(self, x, vx=None, deriv_step=1e-3):
         # Check gradients at left and right boundary of domain
         dx = deriv_step + 1e-8*np.random.randn()
         xp = x + dx

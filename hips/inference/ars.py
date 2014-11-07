@@ -153,7 +153,7 @@ def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
 
     TODO: The logic here is a big ugly... it could use some reworking.
     """
-    # import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
     nsteps = 0
     if domain[0] == -np.Inf:
         # ensure the derivative on the left bound is positive

@@ -12,7 +12,7 @@ def mh(x0, p, q, sample_q, steps=1):
     :param steps:        num MH steps to take
     :return:             list of samples of length 'steps'
     """
-    xs = np.zeros(steps)
+    xs = [] * steps
     x = x0
     for step in range(steps):
         # Make a proposal
@@ -22,11 +22,15 @@ def mh(x0, p, q, sample_q, steps=1):
         qf, qr = q(x, xf), q(xf, x)
 
         # Compute acceptance ratio and accept or reject
-        if np.log(np.random.rand()) < pf + qr - p0 - qf:
+        odds = pf + qr - p0 - qf
+        if np.log(np.random.rand()) < odds:
             x = xf
 
-        xs[step] = x
-    return xs
+        xs.append(x)
+    if steps > 1:
+        return xs
+    else:
+        return xs[0]
 
 def test_mh():
     """

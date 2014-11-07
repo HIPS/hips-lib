@@ -146,7 +146,7 @@ class HomogeneousPoissonProcess(PoissonProcess):
     def _homogeneous_lam_to_array(self, homogeneous_lam, t):
         # Convert lambda to 2d
         N_t = len(t)
-        if homogeneous_lam.ndim == 0:
+        if np.isscalar(homogeneous_lam) or homogeneous_lam.ndim == 0:
             lam = homogeneous_lam * np.ones(N_t)
         elif homogeneous_lam.ndim == 1:
             assert homogeneous_lam.size == N_t, "Homogeneous rate must be either scalar or length T"

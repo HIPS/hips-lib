@@ -85,4 +85,4 @@ def test_polya_gamma():
     # plt.hist(x, 20, normed=True)
     # plt.show()
 
-test_polya_gamma()
+# test_polya_gamma()

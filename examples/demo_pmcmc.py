@@ -6,7 +6,7 @@ from gaussian_lds import *
 from hips.inference.particle_mcmc import *
 
 def sample_gaussian_lds(plot=False):
-    T = 1000
+    T = 100
     N = 1
     D = 2
     dt = 1
@@ -86,7 +86,7 @@ def sample_z_given_x(z_curr, x,
 
 
         # Plot a few random samples
-        for s in range(10):
+        for s in range(1):
             si = np.random.randint(S)
             plt.plot(z_smpls[si,:,0], z_smpls[si,:,1], '-b', lw=0.5)
 
@@ -109,5 +109,5 @@ def profile_demo():
     s = pstats.Stats("Profile.prof")
     s.strip_dirs().sort_stats("time").print_stats()
 
-profile_demo()
+# profile_demo()
 demo()

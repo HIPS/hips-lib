@@ -5,6 +5,7 @@ def discrete_sample(p, N=1, values=None):
     Sample N values from a discrete probability distribution vector p
     If values is given, these elements are returned
     """
+    import pdb; pdb.set_trace()
     bins = np.add.accumulate(p)
     rand_inds = np.digitize(np.random.random(N), bins)
     if N==1:

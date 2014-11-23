@@ -158,6 +158,9 @@ cdef class ParticleGibbsAncestorSampling(object):
 
             # Resample the parent index of the fixed particle
             # TODO: Does the parent get to choose from all particles or only the resampled particles?
+            for n in range(self.N):
+                lp_trans[n] = 0
+
             self.prop.logp(self.z[t-1,:,:], t-1, self.z[t,0,:], lp_trans)
             for n in range(self.N):
                 lp_trans[n] += log(self.weights[t-1,n])
@@ -171,6 +174,7 @@ cdef class ParticleGibbsAncestorSampling(object):
 
         # Sample a trajectory according to the final weights
         n = discrete_sample(self.weights[self.T-1,:])
+        print "sampled particle ", n, " with weight: ", self.weights[self.T-1,n]
         return self.get_trajectory(n)
 
     cpdef double[:,::1] get_trajectory(self, int n):

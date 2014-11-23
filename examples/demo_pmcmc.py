@@ -16,7 +16,7 @@ def sample_gaussian_lds(plot=False):
     th = np.pi/12.0
     A = np.array([[np.cos(th), -np.sin(th)],
                   [np.sin(th),  np.cos(th)]])
-    sigma = 0.1
+    sigma = 0.1 * np.ones(D)
 
     # Direct observation matrix
     C = np.eye(D)
@@ -61,7 +61,7 @@ def sample_z_given_x(z_curr, x,
 
     T,D = z_curr.shape
     T,O = x.shape
-    # import pdb; pdb.set_trace()
+
     pf = ParticleGibbsAncestorSampling(T, N_particles, D)
     pf.initialize(init, prop, lkhd, x, z_curr)
 
@@ -71,6 +71,12 @@ def sample_z_given_x(z_curr, x,
         # Reinitialize with the previous particle
         pf.initialize(init, prop, lkhd, x, z_smpls[s,:,:])
         z_smpls[s,:,:] = pf.sample()
+
+        # Resample transition noise
+        sigmas = resample_transition_noise(prop, z_smpls[s,:,:])
+        # print "Sigmas: ", sigmas
+        prop.set_sigma(np.sqrt(sigmas))
+
 
     z_mean = z_smpls.mean(axis=0)
     z_std = z_smpls.std(axis=0)
@@ -84,7 +90,6 @@ def sample_z_given_x(z_curr, x,
         plt.gca().add_patch(Polygon(z_env, facecolor='b', alpha=0.25, edgecolor='none'))
         plt.plot(z_mean[:,0], z_mean[:,1], 'b', lw=2)
 
-
         # Plot a few random samples
         for s in range(1):
             si = np.random.randint(S)
@@ -95,6 +100,32 @@ def sample_z_given_x(z_curr, x,
 
     return z_smpls
 
+def resample_transition_noise(prop, z,
+                              alpha0=0.1, beta0=0.1):
+    """
+    Resample sigma, the transition noise variance, under an inverse gamma prior
+    """
+    T, D  = z.shape
+    zpred = np.zeros((T,1,D))
+    zdata = z[:,None,:].copy(order='C')
+
+    # Compute mean of the transitions
+    prop.predict(zpred, zdata, np.arange(T-1).astype(np.int32))
+    zpred = zpred[:-1, 0, :]
+    zdata = zdata[:-1, 0, :]
+    zdiffs = zpred - zdata
+
+    # Resample transition noise.
+    zdiffs = np.array(zdiffs)
+
+    sigmasq = np.zeros(D)
+    for d in range(D):
+        alpha = alpha0 + (T-1) / 2.0
+        beta  = beta0 + np.sum(zdiffs[:,d] ** 2) / 2.0
+        # self.sigmas[d] = beta / alpha
+        sigmasq[d] = 1.0 / np.random.gamma(alpha, 1.0/beta)
+
+    return sigmasq
 
 def demo():
     z, x, init, prop, lkhd = sample_gaussian_lds(plot=True)

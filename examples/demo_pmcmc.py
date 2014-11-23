@@ -16,6 +16,7 @@ def sample_gaussian_lds(plot=False):
     th = np.pi/12.0
     A = np.array([[np.cos(th), -np.sin(th)],
                   [np.sin(th),  np.cos(th)]])
+    A += 0.01 * np.eye(D)
     sigma = 0.1 * np.ones(D)
 
     # Direct observation matrix
@@ -62,10 +63,19 @@ def sample_z_given_x(z_curr, x,
     T,D = z_curr.shape
     T,O = x.shape
 
+    # Make a proposal with the wrong dynamics
+    th = np.pi/6.0
+    A = np.array([[np.cos(th), -np.sin(th)],
+                  [np.sin(th),  np.cos(th)]])
+    A += 0.01 * np.eye(D)
+    sigma = 0.1 * np.ones(D)
+    prop = LinearGaussianDynamicalSystemProposal(A, sigma)
+
+
     pf = ParticleGibbsAncestorSampling(T, N_particles, D)
     pf.initialize(init, prop, lkhd, x, z_curr)
 
-    S = 500
+    S = 100
     z_smpls = np.zeros((S,T,D))
     for s in range(S):
         # Reinitialize with the previous particle
@@ -74,7 +84,7 @@ def sample_z_given_x(z_curr, x,
 
         # Resample transition noise
         sigmas = resample_transition_noise(prop, z_smpls[s,:,:])
-        # print "Sigmas: ", sigmas
+        print "Sigmas: ", sigmas
         prop.set_sigma(np.sqrt(sigmas))
 
 
@@ -122,7 +132,6 @@ def resample_transition_noise(prop, z,
     for d in range(D):
         alpha = alpha0 + (T-1) / 2.0
         beta  = beta0 + np.sum(zdiffs[:,d] ** 2) / 2.0
-        # self.sigmas[d] = beta / alpha
         sigmasq[d] = 1.0 / np.random.gamma(alpha, 1.0/beta)
 
     return sigmasq

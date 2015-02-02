@@ -59,3 +59,18 @@ def combo_white_to_color_cmap(colors, nsteps=1000):
              'blue': tuple(blues)}
     cmap = LinearSegmentedColormap('white_color_colormap', cdict, nsteps)
     return cmap
+
+def harvard_colors():
+    return [
+        np.array([165,  28,  48]),    # 0.  crimson
+        np.array([ 78, 132, 196]),    # 1.  blue bonnet
+        np.array([ 82, 133,  76]),    # 2.  ivy
+        np.array([196, 150,  26]),    # 3.  gold
+        np.array([  0, 156, 163]),    # 4.  aqua
+        np.array([232, 125,  30]),    # 5.  saffron
+        np.array([137, 150, 160]),    # 6.  slate
+        np.array([ 41,  51,  82]),    # 7.  indigo
+        np.array([195, 215, 164]),    # 8.  pear
+        np.array([255, 219, 109]),    # 9.  lemon
+        np.array([ 43,  13,  97]),    # 10. dark purple
+    ]

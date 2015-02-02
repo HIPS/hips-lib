@@ -117,6 +117,7 @@ def test_hmc():
     plt.plot(bincenters, p(bincenters), 'r--', linewidth=1)
     plt.show()
 
+
 def test_gamma_linear_regression_hmc():
     """
     Test ARS on a gamma distributed coefficient for a gaussian noise model

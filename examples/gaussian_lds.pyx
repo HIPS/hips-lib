@@ -48,13 +48,35 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
     cdef int D
 
     # Transition noise
-    cdef double sigma
+    cdef double[::1] sigma
 
-    def __init__(self, double[:,::1] A, double sigma):
+    def __init__(self, double[:,::1] A, double[::1] sigma):
         self.A = A
         self.D = A.shape[0]
         assert A.shape[1] == self.D, "Transition matrix A must be square!"
         self.sigma = sigma
+
+    cpdef set_sigma(self, double[::1] sigma):
+        self.sigma = sigma
+
+    cpdef predict(self, double[:,:,::1] zpred, double[:,:,::1] z, int[::1] ts ):
+        cdef int T = z.shape[0]
+        cdef int N = z.shape[1]
+        cdef int D = z.shape[2]
+
+        cdef int S = ts.shape[0]
+        cdef int s, t, n, d1, d2
+
+        for s in range(S):
+            t = ts[s]
+            for n in range(N):
+                # TODO: Use a real matrix multiplication library
+                for d1 in range(D):
+                    # z_t = A*z_{t-1} + noise
+                    zpred[t+1, n, d1] = 0
+                    for d2 in range(D):
+                        zpred[t+1, n, d1] += self.A[d1,d2] * z[t,n,d2]
+
 
     cpdef sample_next(self, double[:,:,::1] z, int i_prev, int[::1] ancestors):
         """ Sample the next state given the previous time index
@@ -81,7 +103,7 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
                     z[i_prev+1, n, d1] += self.A[d1,d2] * z[i_prev,ancestors[n],d2]
 
                 # Add noise
-                z[i_prev+1, n, d1] += self.sigma * rands[n,d1]
+                z[i_prev+1, n, d1] += self.sigma[d1] * rands[n,d1]
 
 
     cpdef logp(self, double[:,::1] z_prev, int i_prev, double[::1] z_curr, double[::1] lp):
@@ -110,8 +132,8 @@ cdef class LinearGaussianDynamicalSystemProposal(Proposal):
 
             sqerr = 0
             for d in range(D):
-                sqerr += (z_curr[d] - z_mean[d])**2
-            lp[n] = -0.5/self.sigma**2 * sqerr
+                sqerr += (z_curr[d] - z_mean[d])**2 / self.sigma[d]**2
+            lp[n] = -0.5 * sqerr
 
 
 cdef class LinearGaussianLikelihood(Likelihood):

@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.random as npr
 
-def polya_gamma(a, c, trunc=500, biased=False):
+def polya_gamma(a, c, trunc=200, biased=False):
     """
     Sample a Polya-gamma distribution. Ported from Mingyuan Zhou's code at:
     http://mingyuanzhou.github.io/Code.html

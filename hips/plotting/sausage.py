@@ -4,7 +4,7 @@ from matplotlib.patches import Polygon
 
 def sausage_plot(x, y, yerr, sgax=None, **kwargs):
     T = x.size
-    assert x.shape == y.shape == (T,)
+    assert x.shape == y.shape == yerr.shape == (T,)
 
     # Get axis
     if sgax is None:

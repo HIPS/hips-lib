@@ -106,15 +106,6 @@ def elliptical_slice(xx, prior, log_like_fn, cur_log_like=None, angle_range=0, l
             phi_min = phi
         else:
             assert np.allclose(xx, xx_prop)
-            # DEBUG
-            # ll1 = log_like_fn(xx, ll_args)
-            # ll2 = log_like_fn(xx, ll_args)
-            # if not ll1==ll2:
-            #     print "ERROR: Consecutive calls to log_like_fn returned different answers! %f,%f" % (ll1,ll2)
-            # print "Likelihood of init value: %.6f" % ll1
-            # print "Threshold: %.6f" % hh
-            # print "Initial likelihood: %.6f" % init_ll
-            # print "Curr likelihood: %.6f" % log_like_fn(xx_prop, ll_args)
             raise Exception("BUG: Shrunk to current position and still rejected!")
             
         phi = np.random.rand()*(phi_max - phi_min) + phi_min

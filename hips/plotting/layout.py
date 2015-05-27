@@ -64,7 +64,7 @@ def remove_tick_marks(ax):
 def create_legend_figure(labels, colors, size=None,
                          fontsize=9, type='line',
                          orientation='horizontal', ncol=None,
-                         **kwargs):
+                         lineargs={}, legendargs={}):
     """
     Create a separate figure for a legend.
     :param labels:
@@ -82,7 +82,7 @@ def create_legend_figure(labels, colors, size=None,
     handles = []
     if type == 'line':
         for c in colors:
-            handles.append(dummyax.plot([0,0],[1,1], color=c, **kwargs)[0])
+            handles.append(dummyax.plot([0,0],[1,1], color=c, **lineargs)[0])
     else:
         raise Exception('Other types of plots are not yet supported')
 
@@ -99,7 +99,8 @@ def create_legend_figure(labels, colors, size=None,
                   labels,
                   loc='center',
                   fontsize=fontsize,
-                  ncol=ncol)
+                  ncol=ncol,
+                  **legendargs)
 
     # Set the figure background to transparent
     fig.patch.set_alpha(0.0)

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
-def create_figure(figsize=None, transparent=True):
-    fig = plt.figure(figsize=figsize)
+def create_figure(figsize=None, transparent=True,**kwargs):
+    fig = plt.figure(figsize=figsize,**kwargs)
     if transparent:
         fig.patch.set_alpha(0.0)
     return fig

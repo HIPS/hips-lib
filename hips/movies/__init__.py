@@ -1,1 +1,2 @@
-__author__ = 'scott'
+from __future__ import absolute_import
+from . import moviemaker

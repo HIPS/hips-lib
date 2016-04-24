@@ -174,7 +174,6 @@ cdef class ParticleGibbsAncestorSampling(object):
 
         # Sample a trajectory according to the final weights
         n = discrete_sample(self.weights[self.T-1,:])
-        #print "sampled particle ", n, " with weight: ", self.weights[self.T-1,n]
         return self.get_trajectory(n)
 
     cpdef double[:,::1] get_trajectory(self, int n):

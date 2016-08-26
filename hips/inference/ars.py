@@ -93,16 +93,12 @@ def adaptive_rejection_sample(func, xs, v_xs, domain, stepsz=1.0, debug=False):
         # Three cases for acception/rejection
         if u <= lhVal - uhVal:
             # accept, u is below lower bound
-            if debug:
-                print "Sample found after %d rejects" % rejects
             return x
 
         # Otherwise we must compute the actual function
         vx = func(x)
         if u <= vx - uhVal:
             # accept, u is between lower bound and f
-            if debug:
-                print "Sample found after %d rejects" % rejects
             return x
 
         # If we made it this far, we rejected.
@@ -120,9 +116,7 @@ def adaptive_rejection_sample(func, xs, v_xs, domain, stepsz=1.0, debug=False):
 
         # Recompute the hulls
         lowerHull, upperHull = _ars_compute_hulls(xs, v_xs, domain)
-    
-        if debug:
-            print 'reject %d' % rejects
+
             
         rejects += 1
 
@@ -144,8 +138,7 @@ def _check_concavity(xs, v_xs):
     g = np.diff(v_xs)/np.diff(xs)
     g2 = np.diff(g)/np.diff(xs[:-1])
     if not np.all(g2<=0):
-        # raise Exception("It looks like the function to be sampled is not log concave!")
-        print Warning("It looks like the function to be sampled is not log concave!")
+        raise Exception("It looks like the function to be sampled is not log concave!")
 
 def _check_boundary_grads(func, xs, v_xs, domain, stepsz):
     """
@@ -454,14 +447,6 @@ def _signed_lse(m, b, a1, a0):
     lse = b - np.log(m*sgn) + am + np.log(se*sgn)
 
     if not np.isfinite(lse):
-        print "LSE is not finite"
-        print "lse: %f" % lse
-        print "m: %f" % m
-        print "b: %f" % b
-        print "a1: %f" % a1
-        print "a2: %f" % a0
-        print "am: %f" % am
-        print "se: %f" % se
         raise Exception("LSE is not finite!")
     
     return lse
@@ -583,11 +568,6 @@ def _ars_compute_hulls(S, fS, domain):
         h.pr = prs[i]
 
     if not np.all(np.isfinite(prs)):
-        print "ARS prs contains Inf or NaN"
-        print lnprs
-        print lnZ
-        print prs
-        import pdb; pdb.set_trace()
         raise Exception("ARS prs contains Inf or NaN")
 
     return lowerHull, upperHull
@@ -595,12 +575,10 @@ def _ars_compute_hulls(S, fS, domain):
 def _ars_sample_upper_hull(upperHull):
     prs = np.array([h.pr for h in upperHull])
     if not np.all(np.isfinite(prs)):
-        print prs
         raise Exception("ARS prs contains Inf or NaN")
 
     cdf = np.cumsum(prs)
     if not np.all(np.isfinite(cdf)):
-        print cdf
         raise Exception("ARS cumsum Inf or NaN")
     
     # randomly choose a line segment
@@ -832,8 +810,6 @@ def test_gamma_linear_regression_ars():
     c_smpls[0] = g.rvs(1)
     y_smpls[0] = c_smpls[0]*x + sig*np.random.randn()
     for s in np.arange(1,N_samples):
-        if np.mod(s, 100) == 0:
-            print "Sample ", s
         # Sample y given c
         y_smpls[s] = c_smpls[s-1]*x + sig*np.random.randn()
 

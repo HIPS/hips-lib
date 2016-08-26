@@ -62,7 +62,6 @@ def elliptical_slice(xx, prior, log_like_fn, cur_log_like=None, angle_range=0, l
     else:
         # User provided Cholesky of prior covariance
         if np.shape(prior) != (D,D):
-            print "Prior shape: ", prior.shape
             raise Exception("Prior must be given by a D-element sample or DxD chol(Sigma, 'lower')")
             
         nu = np.reshape(np.dot(prior, np.random.randn(D,1)).T, np.shape(xx))

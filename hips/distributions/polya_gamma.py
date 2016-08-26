@@ -78,7 +78,6 @@ def test_polya_gamma():
     sortby = 'cumulative'
     ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
     ps.print_stats()
-    print s.getvalue()
 
     # import matplotlib.pyplot as plt
     # plt.figure()

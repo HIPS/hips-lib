@@ -88,7 +88,7 @@ def test_slicesample():
     n_iter = 1000
 
     # Gamma distribution (bounded on left)
-    print "Gamma test"
+    print("Gamma test")
     g = gamma(2.0, loc=0., scale=2.0)
 
     smpls = np.zeros(n_iter)
@@ -97,10 +97,10 @@ def test_slicesample():
         sn, _ = slicesample(smpls[n-1], g.logpdf, lb=1e-5)
         smpls[n] = sn
 
-    print "Expected gamma mean: ", g.mean()
-    print "Inferred gamma mean: ", smpls.mean()
-    print "Expected gamma std:  ", g.std()
-    print "Inferred gamma std:  ", smpls.std()
+    print("Expected gamma mean: ", g.mean())
+    print("Inferred gamma mean: ", smpls.mean())
+    print("Expected gamma std:  ", g.std())
+    print("Inferred gamma std:  ", smpls.std())
 
     fig, ax = plt.subplots(1, 1)
     x = np.linspace(1e-5, g.mean() + 4*g.std(), 1000)

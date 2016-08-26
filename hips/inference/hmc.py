@@ -148,8 +148,6 @@ def test_gamma_linear_regression_hmc():
     y_smpls[0] = np.exp(logc_smpls[0]*x) + sig*np.random.randn()
 
     for s in np.arange(1,N_samples):
-        if np.mod(s, 100) == 0:
-            print "Sample ", s
         # Sample y given c
         y_smpls[s] = np.exp(logc_smpls[s-1])*x + sig*np.random.randn()
 

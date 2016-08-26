@@ -276,6 +276,3 @@ def test_circular_distribution():
     # Plot the results
     cmap = matplotlib.cm.get_cmap('Greys')
     cd.plot(show=True, plot_data=False, cmap=cmap)
-
-    print np.mean(cd.areas.ravel())
-    print np.std(cd.areas.ravel())

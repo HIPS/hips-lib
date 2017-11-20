@@ -7,14 +7,15 @@ def create_figure(figsize=None, transparent=True,**kwargs):
     return fig
 
 def create_axis_at_location(fig, left, bottom, width, height,
-                            transparent=False, box=True, ticks=True):
+                            transparent=False, box=True, ticks=True,
+                            **kwargs):
     """
     Create axes at abolute position by scaling to figure size
     """
     w,h = fig.get_size_inches()
 
     # Adjust subplot so that the panel is 1.25 in high and 1 width
-    ax = fig.add_axes([left/w, bottom/h, width/w, height/h])
+    ax = fig.add_axes([left/w, bottom/h, width/w, height/h], **kwargs)
 
     if transparent:
         ax.patch.set_alpha(0.0)
